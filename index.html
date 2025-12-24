@@ -1,41 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>SOAP Response → JSON Converter</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      padding: 20px;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      padding: 10px;
-      font-family: monospace;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 15px;
-      cursor: pointer;
-    }
-    pre {
-      background: #1e1e1e;
-      color: #dcdcdc;
-      padding: 15px;
-      overflow: auto;
-      max-height: 500px;
-    }
-    .error {
-      color: red;
-      margin-top: 10px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Dynamic SOAP JSON Parser</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
+  textarea { width: 100%; height: 200px; font-family: monospace; padding: 10px; }
+  button { margin-top: 10px; padding: 10px 15px; cursor: pointer; }
+  pre { background: #1e1e1e; color: #dcdcdc; padding: 15px; overflow: auto; max-height: 500px; white-space: pre-wrap; word-wrap: break-word; }
+  .error { color: red; margin-top: 10px; }
+</style>
 </head>
 <body>
 
-<h2>SOAP API Response → JSON Converter</h2>
+<h2>Dynamic SOAP JSON Parser</h2>
 
 <textarea id="input" placeholder="Paste SOAP response here..."></textarea>
 <br>
@@ -45,37 +23,60 @@
 <div class="error" id="error"></div>
 
 <script>
+// Recursively parses any JSON string, dynamic for unknown structures
 function deepParse(value) {
-  // If it's an array, parse each item
-  if (Array.isArray(value)) {
-    return value.map(deepParse);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+        (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try {
+        return deepParse(JSON.parse(trimmed)); // recursive parse
+      } catch {
+        return value; // keep original if not valid JSON
+      }
+    }
+    return value;
   }
 
-  // If it's an object, parse each property
+  if (Array.isArray(value)) {
+    return value.map(deepParse); // recurse arrays
+  }
+
   if (value !== null && typeof value === "object") {
     const result = {};
     for (const key in value) {
-      result[key] = deepParse(value[key]);
+      result[key] = deepParse(value[key]); // recurse objects
     }
     return result;
   }
 
-  // If it's a string, try to parse JSON inside it
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (
-      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-      (trimmed.startsWith("[") && trimmed.endsWith("]"))
-    ) {
-      try {
-        return deepParse(JSON.parse(trimmed));
-      } catch {
-        return value; // not valid JSON
-      }
-    }
-  }
+  return value; // numbers, booleans, null
+}
 
-  return value;
+function convert() {
+  const input = document.getElementById("input").value;
+  const output = document.getElementById("output");
+  const error = document.getElementById("error");
+
+  output.textContent = "";
+  error.textContent = "";
+
+  try {
+    // Step 1: Parse outer JSON
+    let outer = JSON.parse(input);
+
+    // Step 2: If 'd' exists and is a string, parse it
+    let data = outer.d && typeof outer.d === "string" ? JSON.parse(outer.d) : outer;
+
+    // Step 3: Deep parse all nested JSON dynamically
+    const parsed = deepParse(data);
+
+    // Step 4: Pretty print
+    output.textContent = JSON.stringify(parsed, null, 2);
+
+  } catch (e) {
+    error.textContent = "Parsing error: " + e.message;
+  }
 }
 </script>
 
