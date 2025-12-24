@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SOAP Response → JSON Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-family: monospace;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #dcdcdc;
+      padding: 15px;
+      overflow: auto;
+      max-height: 500px;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>SOAP API Response → JSON Converter</h2>
+
+<textarea id="input" placeholder="Paste SOAP response here..."></textarea>
+<br>
+<button onclick="convert()">Convert</button>
+
+<pre id="output"></pre>
+<div class="error" id="error"></div>
+
+<script>
+function convert() {
+  const input = document.getElementById("input").value;
+  const output = document.getElementById("output");
+  const error = document.getElementById("error");
+
+  output.textContent = "";
+  error.textContent = "";
+
+  try {
+    // Step 1: Parse outer JSON
+    let outer = JSON.parse(input);
+
+    // Step 2: If 'd' exists and is a string, parse it
+    let result = outer;
+    if (outer.d && typeof outer.d === "string") {
+      result = JSON.parse(outer.d);
+    }
+
+    // Step 3: Pretty print final JSON
+    output.textContent = JSON.stringify(result, null, 2);
+
+  } catch (e) {
+    error.textContent = "Invalid JSON or parsing error: " + e.message;
+  }
+}
+</script>
+
+</body>
+</html>
