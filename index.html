@@ -6,9 +6,26 @@
 <style>
   body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
   textarea { width: 100%; height: 200px; font-family: monospace; padding: 10px; }
-  button { margin-top: 10px; padding: 10px 15px; cursor: pointer; }
+  button { margin-top: 10px; padding: 10px 15px; cursor: pointer; margin-right: 5px; }
   pre { background: #1e1e1e; color: #dcdcdc; padding: 15px; overflow: auto; max-height: 500px; white-space: pre-wrap; word-wrap: break-word; }
   .error { color: red; margin-top: 10px; }
+  /* Notification style */
+  #notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4caf50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+  }
+  #notification.show {
+    opacity: 1;
+  }
 </style>
 </head>
 <body>
@@ -18,41 +35,35 @@
 <textarea id="input" placeholder="Paste SOAP response here..."></textarea>
 <br>
 <button onclick="convert()">Convert</button>
+<button onclick="copyOutput()">Copy JSON</button>
 
 <pre id="output"></pre>
 <div class="error" id="error"></div>
 
+<!-- Notification -->
+<div id="notification">Copied to clipboard!</div>
+
 <script>
-// Recursively parses any JSON string, dynamic for unknown structures
+// Recursive deep parser
 function deepParse(value) {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
         (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
-      try {
-        return deepParse(JSON.parse(trimmed)); // recursive parse
-      } catch {
-        return value; // keep original if not valid JSON
-      }
+      try { return deepParse(JSON.parse(trimmed)); } catch { return value; }
     }
     return value;
   }
-
-  if (Array.isArray(value)) {
-    return value.map(deepParse); // recurse arrays
-  }
-
+  if (Array.isArray(value)) return value.map(deepParse);
   if (value !== null && typeof value === "object") {
     const result = {};
-    for (const key in value) {
-      result[key] = deepParse(value[key]); // recurse objects
-    }
+    for (const key in value) result[key] = deepParse(value[key]);
     return result;
   }
-
-  return value; // numbers, booleans, null
+  return value;
 }
 
+// Convert SOAP response to parsed JSON
 function convert() {
   const input = document.getElementById("input").value;
   const output = document.getElementById("output");
@@ -62,21 +73,35 @@ function convert() {
   error.textContent = "";
 
   try {
-    // Step 1: Parse outer JSON
     let outer = JSON.parse(input);
-
-    // Step 2: If 'd' exists and is a string, parse it
     let data = outer.d && typeof outer.d === "string" ? JSON.parse(outer.d) : outer;
-
-    // Step 3: Deep parse all nested JSON dynamically
     const parsed = deepParse(data);
-
-    // Step 4: Pretty print
     output.textContent = JSON.stringify(parsed, null, 2);
-
   } catch (e) {
     error.textContent = "Parsing error: " + e.message;
   }
+}
+
+// Copy JSON to clipboard with friendly notification
+function copyOutput() {
+  const output = document.getElementById("output").textContent;
+  if (!output) return;
+  navigator.clipboard.writeText(output).then(() => {
+    const notification = document.getElementById("notification");
+    notification.classList.add("show");
+    // Hide after 2 seconds
+    setTimeout(() => notification.classList.remove("show"), 2000);
+  }).catch(() => {
+    const notification = document.getElementById("notification");
+    notification.textContent = "Failed to copy!";
+    notification.style.background = "#f44336"; // red
+    notification.classList.add("show");
+    setTimeout(() => {
+      notification.classList.remove("show");
+      notification.style.background = "#4caf50";
+      notification.textContent = "Copied to clipboard!";
+    }, 2000);
+  });
 }
 </script>
 
