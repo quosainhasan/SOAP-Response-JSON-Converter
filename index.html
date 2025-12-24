@@ -45,30 +45,37 @@
 <div class="error" id="error"></div>
 
 <script>
-function convert() {
-  const input = document.getElementById("input").value;
-  const output = document.getElementById("output");
-  const error = document.getElementById("error");
-
-  output.textContent = "";
-  error.textContent = "";
-
-  try {
-    // Step 1: Parse outer JSON
-    let outer = JSON.parse(input);
-
-    // Step 2: If 'd' exists and is a string, parse it
-    let result = outer;
-    if (outer.d && typeof outer.d === "string") {
-      result = JSON.parse(outer.d);
-    }
-
-    // Step 3: Pretty print final JSON
-    output.textContent = JSON.stringify(result, null, 2);
-
-  } catch (e) {
-    error.textContent = "Invalid JSON or parsing error: " + e.message;
+function deepParse(value) {
+  // If it's an array, parse each item
+  if (Array.isArray(value)) {
+    return value.map(deepParse);
   }
+
+  // If it's an object, parse each property
+  if (value !== null && typeof value === "object") {
+    const result = {};
+    for (const key in value) {
+      result[key] = deepParse(value[key]);
+    }
+    return result;
+  }
+
+  // If it's a string, try to parse JSON inside it
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    ) {
+      try {
+        return deepParse(JSON.parse(trimmed));
+      } catch {
+        return value; // not valid JSON
+      }
+    }
+  }
+
+  return value;
 }
 </script>
 
